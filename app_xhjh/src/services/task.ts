@@ -68,6 +68,7 @@ export const taskService = {
     description?: string;
     category: TaskCategory;
     target_date?: string;
+    assignee_user_id?: number;
   }): Promise<Task> => {
     const response = await api.post<Task>('/task/create', params);
     return response.data;

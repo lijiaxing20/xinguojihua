@@ -38,11 +38,12 @@ export const wishService = {
     return response.data;
   },
   
-  // 创建心愿（孩子端）
+  // 创建心愿（孩子端或家长代创建）
   createWish: async (params: {
     wish_name: string;
     description?: string;
     required_energy?: number; // 建议能量值，最终由家长审核
+    user_id?: number; // 目标用户ID（家长代创建时必填）
   }): Promise<Wish> => {
     const response = await api.post<Wish>('/wish/create', params);
     return response.data;
@@ -74,8 +75,12 @@ export const wishService = {
   updateWish: async (wishId: number, params: Partial<{
     wish_name: string;
     description: string;
+    required_energy: number;
   }>): Promise<Wish> => {
-    const response = await api.put<Wish>(`/wish/update/${wishId}`, params);
+    const response = await api.post<Wish>('/wish/update', {
+      id: wishId,
+      ...params
+    });
     return response.data;
   },
   

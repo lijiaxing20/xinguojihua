@@ -81,5 +81,26 @@ class FamilyMember extends Model
             ->where('role_in_family', 'child')
             ->column('user_id');
     }
+
+    /**
+     * 检查是否是某孩子的家长
+     * @param int $parentId
+     * @param int $childId
+     * @return bool
+     */
+    public static function isParentOf($parentId, $childId)
+    {
+        $parent = self::where('user_id', $parentId)->where('role_in_family', 'parent')->find();
+        if (!$parent) {
+            return false;
+        }
+        
+        $child = self::where('user_id', $childId)->where('role_in_family', 'child')->find();
+        if (!$child) {
+            return false;
+        }
+        
+        return $parent['family_id'] == $child['family_id'];
+    }
 }
 

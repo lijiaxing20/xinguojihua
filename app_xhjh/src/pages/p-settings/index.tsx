@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Header } from '../../components/Header';
+import { authService } from '../../services/auth';
 import styles from './styles.module.css';
 
 interface NotificationSettings {
@@ -32,14 +33,34 @@ const SettingsPage: React.FC = () => {
   const [selectedTheme, setSelectedTheme] = useState<string>('light');
   const [selectedColor, setSelectedColor] = useState<string>('blue');
   const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(false);
+
   // 设置页面标题
   useEffect(() => {
     const originalTitle = document.title;
     document.title = '系统设置 - 星火计划';
+    
+    // 加载设置
+    loadSettings();
+
     return () => {
       document.title = originalTitle;
     };
   }, []);
+
+  const loadSettings = async () => {
+    try {
+      const settings = await authService.getSettings();
+      if (settings) {
+        if (settings.notificationSettings) setNotificationSettings(settings.notificationSettings);
+        if (settings.selectedNotificationMethods) setSelectedNotificationMethods(settings.selectedNotificationMethods);
+        if (settings.selectedTheme) setSelectedTheme(settings.selectedTheme);
+        if (settings.selectedColor) setSelectedColor(settings.selectedColor);
+      }
+    } catch (error) {
+      console.error('Failed to load settings:', error);
+    }
+  };
 
   // 处理通知开关变化
   const handleNotificationToggle = (key: keyof NotificationSettings) => {
@@ -71,7 +92,7 @@ const SettingsPage: React.FC = () => {
   };
 
   // 处理表单提交
-  const handleFormSubmit = (e: React.FormEvent) => {
+  const handleFormSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     const settingsData: SettingsFormData = {
@@ -81,8 +102,16 @@ const SettingsPage: React.FC = () => {
       selectedColor
     };
     
-    console.log('保存设置:', settingsData);
-    setShowSuccessModal(true);
+    setLoading(true);
+    try {
+      await authService.updateSettings(settingsData);
+      setShowSuccessModal(true);
+    } catch (error) {
+      console.error('Failed to save settings:', error);
+      alert('保存设置失败，请重试');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // 处理取消
@@ -452,9 +481,18 @@ const SettingsPage: React.FC = () => {
                 </button>
                 <button 
                   type="submit" 
-                  className={`${styles.btnGradient} text-white px-6 py-2 rounded-lg text-sm font-medium`}
+                  disabled={loading}
+                  className={`${styles.btnGradient} text-white px-6 py-2 rounded-lg text-sm font-medium ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}
                 >
-                  <i className="fas fa-save mr-2"></i>保存设置
+                  {loading ? (
+                    <>
+                      <i className="fas fa-spinner fa-spin mr-2"></i>保存中...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-save mr-2"></i>保存设置
+                    </>
+                  )}
                 </button>
               </div>
             </form>

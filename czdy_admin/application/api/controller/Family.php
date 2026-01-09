@@ -37,42 +37,49 @@ class Family extends Api
      */
     public function info()
     {
-        $member = FamilyMemberModel::where('user_id', $this->auth->id)->find();
-        
-        if (!$member) {
-            $this->success('', ['has_family' => false]);
-        }
+        try {
+            $member = FamilyMemberModel::where('user_id', $this->auth->id)->find();
+            
+            if (!$member) {
+                $this->success('', ['has_family' => false]);
+            }
 
-        $family = FamilyModel::with(['members.user', 'creator'])->find($member->family_id);
-        
-        if (!$family) {
-            $this->success('', ['has_family' => false]);
-        }
+            $family = FamilyModel::with(['members.user', 'creator'])->find($member->family_id);
+            
+            if (!$family) {
+                $this->success('', ['has_family' => false]);
+            }
 
-        // 格式化成员信息
-        $members = [];
-        foreach ($family->members as $m) {
-            $members[] = [
-                'id' => $m->id,
-                'user_id' => $m->user_id,
-                'role' => $m->role_in_family,
-                'nickname' => $m->user ? $m->user->nickname : '已删除用户',
-                'avatar' => $m->user ? $m->user->avatar : '',
-                'joined_at' => $m->joined_at,
-                'is_creator' => $family->creator_user_id == $m->user_id,
-            ];
-        }
+            // 格式化成员信息
+            $members = [];
+            foreach ($family->members as $m) {
+                $members[] = [
+                    'id' => $m->id,
+                    'user_id' => $m->user_id,
+                    'role' => $m->role_in_family,
+                    'nickname' => $m->user ? $m->user->nickname : '已删除用户',
+                    'avatar' => $m->user ? $m->user->avatar : '',
+                    'joined_at' => $m->joined_at,
+                    'is_creator' => $family->creator_user_id == $m->user_id,
+                ];
+            }
 
-        $this->success('', [
-            'has_family' => true,
-            'family' => [
-                'id' => $family->id,
-                'family_name' => $family->family_name,
-                'creator_user_id' => $family->creator_user_id,
-                'settings' => json_decode($family->settings, true),
-                'members' => $members,
-            ],
-        ]);
+            $this->success('', [
+                'has_family' => true,
+                'family' => [
+                    'id' => $family->id,
+                    'family_name' => $family->family_name,
+                    'creator_user_id' => $family->creator_user_id,
+                    'settings' => json_decode($family->settings, true),
+                    'members' => $members,
+                ],
+            ]);
+        } catch (\think\exception\HttpResponseException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            // 捕获异常，避免500错误
+            $this->error('获取家庭信息失败: ' . $e->getMessage() . ' | ' . $e->getFile() . ':' . $e->getLine());
+        }
     }
 
     /**
@@ -543,7 +550,7 @@ class Family extends Api
 
         // 自动生成用户名和密码
         $username = 'child_' . date('YmdHis') . '_' . Random::alnum(4);
-        $password = Random::alnum(8);
+        $password = '123456'; // 默认密码
         $salt = Random::alnum();
         
         // 手动创建用户，避免Auth::register自动登录导致家长掉线

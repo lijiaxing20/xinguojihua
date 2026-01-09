@@ -13,7 +13,7 @@ import { useToast } from '../../components/Toast';
 
 const WishListPage: React.FC = () => {
   const { userInfo, refreshUserInfo } = useAuthStore();
-  const { currentChild } = useFamilyStore();
+  const { currentChild, familyMembers } = useFamilyStore();
   const { success, error: showError, warning } = useToast();
   const [wishesData, setWishesData] = useState<UIWish[]>([]);
   const [childEnergy, setChildEnergy] = useState(0);
@@ -35,7 +35,7 @@ const WishListPage: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // 表单数据
-  const [createForm, setCreateForm] = useState({ name: '', description: '', requiredEnergy: '' });
+  const [createForm, setCreateForm] = useState({ name: '', description: '', requiredEnergy: '', childId: '' });
   const [editForm, setEditForm] = useState({ name: '', description: '', requiredEnergy: '' });
   const [currentWish, setCurrentWish] = useState<UIWish | null>(null);
   const [loading, setLoading] = useState(false);
@@ -163,7 +163,12 @@ const WishListPage: React.FC = () => {
 
   // 显示创建模态框
   const handleShowCreateModal = () => {
-    setCreateForm({ name: '', description: '' });
+    setCreateForm({ 
+      name: '', 
+      description: '', 
+      requiredEnergy: '',
+      childId: currentChild ? String(currentChild.user_id) : (familyMembers.length > 0 ? String(familyMembers[0].user_id) : '')
+    });
     setShowCreateModal(true);
   };
 
@@ -215,6 +220,8 @@ const WishListPage: React.FC = () => {
     wishService.createWish({
       wish_name: createForm.name,
       description: createForm.description,
+      required_energy: Number(createForm.requiredEnergy) || 0,
+      user_id: createForm.childId ? Number(createForm.childId) : undefined
     }).then((w) => {
       const newWish: UIWish = {
         id: String(w.id),
@@ -676,6 +683,24 @@ const WishListPage: React.FC = () => {
                   </button>
                 </div>
                 <form onSubmit={handleCreateWish} className="space-y-4">
+                  {familyMembers.length > 0 && (
+                    <div>
+                      <label htmlFor="wish-child" className="block text-sm font-medium text-text-primary mb-2">为谁创建 *</label>
+                      <select 
+                        id="wish-child" 
+                        value={createForm.childId}
+                        onChange={(e) => setCreateForm(prev => ({ ...prev, childId: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                        required
+                      >
+                        {familyMembers.map(member => (
+                          <option key={member.user_id} value={member.user_id}>
+                            {member.nickname}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
                   <div>
                     <label htmlFor="wish-name" className="block text-sm font-medium text-text-primary mb-2">心愿名称 *</label>
                     <input 

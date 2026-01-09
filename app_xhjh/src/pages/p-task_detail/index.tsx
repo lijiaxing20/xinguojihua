@@ -155,8 +155,10 @@ const TaskDetailPage: React.FC = () => {
   };
 
   const handleCheckin = () => {
-    const taskId = searchParams.get('taskId') || 'task1';
-    console.log('打开打卡弹窗', taskId);
+    const taskId = searchParams.get('taskId');
+    if (taskId) {
+      navigate(`/task-checkin?taskId=${taskId}`);
+    }
   };
 
   const handleProvideFeedback = () => {

@@ -28,6 +28,17 @@ const TaskListPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // 编辑弹窗状态
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [currentTask, setCurrentTask] = useState<UITask | null>(null);
+  const [editForm, setEditForm] = useState({ 
+    task_name: '', 
+    description: '', 
+    category: '',
+    energy_value: '',
+    target_date: ''
+  });
+
   // 设置页面标题
   useEffect(() => {
     const originalTitle = document.title;
@@ -194,6 +205,42 @@ const TaskListPage: React.FC = () => {
   const refreshTasks = () => {
     fetchTasks();
     info('任务列表已刷新！');
+  };
+
+  // 打开编辑弹窗
+  const handleShowEditModal = (task: UITask) => {
+    setCurrentTask(task);
+    setEditForm({
+      task_name: task.task_name,
+      description: task.description || '',
+      category: task.category,
+      energy_value: String(task.energy_value || 0),
+      target_date: task.target_date ? task.target_date.split(' ')[0] : ''
+    });
+    setShowEditModal(true);
+  };
+
+  // 提交编辑
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!currentTask) return;
+    
+    try {
+      await taskService.updateTask({
+        id: currentTask.id,
+        task_name: editForm.task_name,
+        description: editForm.description,
+        category: editForm.category,
+        energy_value: Number(editForm.energy_value),
+        target_date: editForm.target_date
+      });
+      
+      success('任务更新成功');
+      setShowEditModal(false);
+      fetchTasks();
+    } catch (err: any) {
+      showError(err.message || '更新失败');
+    }
   };
 
   // 获取分类文本
@@ -580,13 +627,13 @@ const TaskListPage: React.FC = () => {
                             </td>
                             <td className="py-3 px-4">
                               <div className="flex space-x-2">
-                                <Link 
-                                  to={`/task-create?taskId=${task.id}`}
+                                <button 
+                                  onClick={() => handleShowEditModal(task)}
                                   className="text-primary hover:text-blue-700 text-sm" 
                                   title="编辑"
                                 >
                                   <i className="fas fa-edit"></i>
-                                </Link>
+                                </button>
                                 <button 
                                   onClick={() => handleDeleteTask(task.id)}
                                   className="text-danger hover:text-red-700 text-sm" 
@@ -678,6 +725,104 @@ const TaskListPage: React.FC = () => {
           )}
         </main>
       </div>
+
+      {/* 编辑弹窗 */}
+      {showEditModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-2xl w-full max-w-lg p-6 m-4 animate-fade-in">
+            <div className="flex justify-between items-center mb-6">
+              <h3 className="text-xl font-bold text-gray-800">编辑任务</h3>
+              <button 
+                onClick={() => setShowEditModal(false)}
+                className="text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <i className="fas fa-times text-xl"></i>
+              </button>
+            </div>
+            
+            <form onSubmit={handleEditSubmit}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">任务名称</label>
+                  <input
+                    type="text"
+                    value={editForm.task_name}
+                    onChange={(e) => setEditForm({...editForm, task_name: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                    placeholder="请输入任务名称"
+                    required
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">任务描述</label>
+                  <textarea
+                    value={editForm.description}
+                    onChange={(e) => setEditForm({...editForm, description: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all h-24 resize-none"
+                    placeholder="请输入任务描述"
+                  />
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">任务分类</label>
+                    <select
+                      value={editForm.category}
+                      onChange={(e) => setEditForm({...editForm, category: e.target.value})}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                      required
+                    >
+                      <option value="habit">习惯养成</option>
+                      <option value="learning">学习探索</option>
+                      <option value="skill">兴趣技能</option>
+                      <option value="family">家庭贡献</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">能量值奖励</label>
+                    <input
+                      type="number"
+                      value={editForm.energy_value}
+                      onChange={(e) => setEditForm({...editForm, energy_value: e.target.value})}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                      placeholder="0"
+                      min="0"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">计划完成日期</label>
+                  <input
+                    type="date"
+                    value={editForm.target_date}
+                    onChange={(e) => setEditForm({...editForm, target_date: e.target.value})}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex space-x-3 mt-8">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="flex-1 py-2 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
+                >
+                  取消
+                </button>
+                <button
+                  type="submit"
+                  className={`${styles.btnGradient} flex-1 py-2 text-white rounded-xl font-medium shadow-lg hover:opacity-90 transition-opacity`}
+                >
+                  保存修改
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

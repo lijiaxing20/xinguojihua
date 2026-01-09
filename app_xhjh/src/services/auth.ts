@@ -149,6 +149,17 @@ export const authService = {
     });
   },
   
+  // 获取用户设置
+  getSettings: async (): Promise<any> => {
+    const response = await api.get('/user/settings');
+    return response.data;
+  },
+
+  // 更新用户设置
+  updateSettings: async (settings: any): Promise<void> => {
+    await api.post('/user/settings', { settings });
+  },
+  
   // 检查 Token 是否有效
   checkToken: async (): Promise<{ token: string; expires_in: number }> => {
     const response = await api.get<{ token: string; expires_in: number }>('/token/check');

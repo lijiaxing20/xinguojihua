@@ -20,6 +20,20 @@ class Wish extends Api
     // 无需单独鉴权（只要登录即可）
     protected $noNeedRight = '*';
 
+    public function _initialize()
+    {
+        parent::_initialize();
+        // 自动检查并添加 required_energy 字段
+        try {
+            $columns = \think\Db::query("SHOW COLUMNS FROM fa_wish LIKE 'required_energy'");
+            if (empty($columns)) {
+                \think\Db::execute("ALTER TABLE fa_wish ADD COLUMN required_energy INT(10) UNSIGNED DEFAULT '0' COMMENT '所需能量值' AFTER description");
+            }
+        } catch (\Exception $e) {
+            // ignore
+        }
+    }
+
     /**
      * 心愿列表
      *
@@ -84,6 +98,14 @@ class Wish extends Api
      */
     public function detail($id = 0)
     {
+        if (!$id) {
+            $id = $this->request->param('id');
+        }
+
+        if (!$id) {
+            $this->error('参数错误');
+        }
+
         $wish = WishModel::get($id);
         if (!$wish) {
             $this->error('心愿不存在');
@@ -135,8 +157,20 @@ class Wish extends Api
         // 获取用户的家庭ID
         $familyId = \app\common\model\FamilyMember::getUserFamilyId($this->auth->id) ?? 0;
         
+        $targetUserId = $this->auth->id;
+        // 如果是家长，可以为孩子创建心愿
+        if (isset($params['user_id']) && $params['user_id']) {
+            if ($params['user_id'] != $this->auth->id) {
+                 $isParent = \app\common\model\FamilyMember::isParentOf($this->auth->id, $params['user_id']);
+                 if (!$isParent) {
+                     $this->error('无权为该用户创建心愿');
+                 }
+                 $targetUserId = $params['user_id'];
+            }
+        }
+
         $wish                  = new WishModel();
-        $wish->user_id         = $this->auth->id;
+        $wish->user_id         = $targetUserId;
         $wish->family_id       = $familyId;
         $wish->wish_name       = $params['wish_name'];
         $wish->description     = isset($params['description']) ? $params['description'] : '';
@@ -241,7 +275,11 @@ class Wish extends Api
         }
 
         if ((int)$wish['user_id'] !== (int)$this->auth->id) {
-            $this->error('无权限操作该心愿');
+            // Check parent proxy
+            $isParent = \app\common\model\FamilyMember::isParentOf($this->auth->id, $wish['user_id']);
+            if (!$isParent) {
+                $this->error('无权限操作该心愿');
+            }
         }
 
         if ($wish['status'] !== 'approved') {
@@ -249,7 +287,7 @@ class Wish extends Api
         }
 
         // 检查能量值是否足够
-        $userEnergy = EnergyLog::getUserEnergy($this->auth->id);
+        $userEnergy = EnergyLog::getUserEnergy($wish['user_id']);
         if ($userEnergy < $wish['required_energy']) {
             $this->error('能量值不足，当前：' . $userEnergy . '，需要：' . $wish['required_energy']);
         }
@@ -340,8 +378,14 @@ class Wish extends Api
         $hasPermission = false;
         if ((int)$wish['user_id'] === (int)$this->auth->id) {
             // 自己修改
-            if ($wish['status'] !== 'pending') {
-                $this->error('只能修改待审核的心愿');
+            // 允许修改 pending 和 approved 状态的心愿
+            // 如果心愿已完成(fulfilled)则不能修改
+            if ($wish['status'] === 'fulfilled') {
+                $this->error('已实现的心愿无法修改');
+            }
+            // 如果心愿被拒绝，允许修改并重新提交（状态重置为pending）
+            if ($wish['status'] === 'rejected') {
+                $wish->status = 'pending';
             }
             $hasPermission = true;
         } else {

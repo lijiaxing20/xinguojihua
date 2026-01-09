@@ -31,6 +31,10 @@ class User extends Api
             if (empty($columns)) {
                 \think\Db::execute("ALTER TABLE fa_user ADD COLUMN birthday DATE DEFAULT NULL COMMENT '生日' AFTER gender");
             }
+            $columns = \think\Db::query("SHOW COLUMNS FROM fa_user LIKE 'settings'");
+            if (empty($columns)) {
+                \think\Db::execute("ALTER TABLE fa_user ADD COLUMN settings TEXT DEFAULT NULL COMMENT '用户设置' AFTER energy");
+            }
         } catch (\Exception $e) {
             // 忽略错误
         }
@@ -232,6 +236,31 @@ class User extends Api
             $this->error($e->getMessage());
         }
         $this->success();
+    }
+
+    /**
+     * 获取或更新用户设置
+     *
+     * @ApiMethod (POST)
+     * @ApiParams (name="settings", type="string", required=false, description="设置JSON字符串")
+     */
+    public function settings()
+    {
+        $user = $this->auth->getUser();
+        if ($this->request->isPost()) {
+            $settings = $this->request->post('settings');
+            // 如果是数组，转为json
+            if (is_array($settings)) {
+                $settings = json_encode($settings, JSON_UNESCAPED_UNICODE);
+            }
+            $user->settings = $settings;
+            $user->save();
+            $this->success(__('Settings saved successful'));
+        } else {
+            $settings = $user->settings;
+            $data = json_decode($settings, true) ?: [];
+            $this->success('', $data);
+        }
     }
 
     /**

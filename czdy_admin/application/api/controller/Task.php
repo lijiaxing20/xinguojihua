@@ -90,61 +90,74 @@ class Task extends Api
      */
     public function detail($id = 0)
     {
-        $task = TaskModel::get($id);
-        if (!$task) {
-            $this->error('任务不存在');
+        // 如果通过路由参数传递id
+        if (!$id) {
+            $id = $this->request->param('id');
         }
-
-        // 权限检查
-        $hasPermission = false;
         
-        // 1. 任务相关人（创建者或执行者）
-        if ((int)$task['assignee_user_id'] === (int)$this->auth->id || (int)$task['creator_user_id'] === (int)$this->auth->id) {
-            $hasPermission = true;
-        } else {
-            // 2. 家庭家长
-            $member = \app\common\model\FamilyMember::where('user_id', $this->auth->id)->find();
-            if ($member && $member['role_in_family'] === 'parent' && (int)$member['family_id'] === (int)$task['family_id']) {
-                $hasPermission = true;
+        if (!$id) {
+            $this->error('参数错误');
+        }
+
+        try {
+            $task = TaskModel::get($id);
+            if (!$task) {
+                $this->error('任务不存在');
             }
+
+            // 1. 任务相关人（创建者或执行者）
+            $hasPermission = false;
+            if ((int)$task['assignee_user_id'] === (int)$this->auth->id || (int)$task['creator_user_id'] === (int)$this->auth->id) {
+                $hasPermission = true;
+            } else {
+                // 2. 家庭家长
+                $member = \app\common\model\FamilyMember::where('user_id', $this->auth->id)->find();
+                if ($member && $member['role_in_family'] === 'parent' && (int)$member['family_id'] === (int)$task['family_id']) {
+                    $hasPermission = true;
+                }
+            }
+
+            if (!$hasPermission) {
+                $this->error('无权限查看该任务');
+            }
+
+            // 获取创建者和执行者信息
+            $creator = \app\common\model\User::get($task['creator_user_id']);
+            $task['creator_name'] = $creator ? $creator->nickname : 'Unknown';
+            $task['creator_avatar'] = $creator ? $creator->avatar : '';
+
+            $assignee = \app\common\model\User::get($task['assignee_user_id']);
+            $task['assignee_name'] = $assignee ? $assignee->nickname : 'Unknown';
+            $task['assignee_avatar'] = $assignee ? $assignee->avatar : '';
+
+            // 加载打卡记录
+            $checkins = TaskCheckinModel::where('task_id', $task['id'])
+                ->order('id', 'desc')
+                ->select();
+
+            foreach ($checkins as &$checkin) {
+                 $user = \app\common\model\User::get($checkin['user_id']);
+                 $checkin['user_name'] = $user ? $user->nickname : '';
+                 $checkin['user_avatar'] = $user ? $user->avatar : '';
+
+                 $feedback = ParentFeedbackModel::where('checkin_id', $checkin['id'])->find();
+                 if ($feedback) {
+                     $parent = \app\common\model\User::get($feedback['parent_user_id']);
+                     $feedback['parent_name'] = $parent ? $parent->nickname : '';
+                     $feedback['parent_avatar'] = $parent ? $parent->avatar : '';
+                     $checkin['parent_feedback'] = $feedback;
+                 }
+            }
+            unset($checkin);
+
+            $task['checkins'] = $checkins;
+
+            $this->success('', $task);
+        } catch (\think\exception\HttpResponseException $e) {
+            throw $e;
+        } catch (\Exception $e) {
+            $this->error('获取任务详情失败：' . $e->getMessage());
         }
-
-        if (!$hasPermission) {
-            $this->error('无权限查看该任务');
-        }
-
-        // 获取创建者和执行者信息
-        $creator = \app\common\model\User::get($task['creator_user_id']);
-        $task['creator_name'] = $creator ? $creator->nickname : 'Unknown';
-        $task['creator_avatar'] = $creator ? $creator->avatar : '';
-
-        $assignee = \app\common\model\User::get($task['assignee_user_id']);
-        $task['assignee_name'] = $assignee ? $assignee->nickname : 'Unknown';
-        $task['assignee_avatar'] = $assignee ? $assignee->avatar : '';
-
-        // 加载打卡记录
-        $checkins = TaskCheckinModel::where('task_id', $task['id'])
-            ->order('id', 'desc')
-            ->select();
-
-        foreach ($checkins as &$checkin) {
-             $user = \app\common\model\User::get($checkin['user_id']);
-             $checkin['user_name'] = $user ? $user->nickname : '';
-             $checkin['user_avatar'] = $user ? $user->avatar : '';
-
-             $feedback = ParentFeedbackModel::where('checkin_id', $checkin['id'])->find();
-             if ($feedback) {
-                 $parent = \app\common\model\User::get($feedback['parent_user_id']);
-                 $feedback['parent_name'] = $parent ? $parent->nickname : '';
-                 $feedback['parent_avatar'] = $parent ? $parent->avatar : '';
-                 $checkin['parent_feedback'] = $feedback;
-             }
-        }
-        unset($checkin);
-
-        $task['checkins'] = $checkins;
-
-        $this->success('', $task);
     }
 
     /**
@@ -174,11 +187,20 @@ class Task extends Api
         // 获取用户的家庭ID
         $familyId = \app\common\model\FamilyMember::getUserFamilyId($this->auth->id) ?? 0;
         
+        $assigneeUserId = $this->auth->id;
+        if (isset($params['assignee_user_id']) && $params['assignee_user_id']) {
+            // 如果指定了分配对象，检查是否在同一家庭
+            $targetFamilyId = \app\common\model\FamilyMember::getUserFamilyId($params['assignee_user_id']);
+            if ($targetFamilyId == $familyId) {
+                $assigneeUserId = $params['assignee_user_id'];
+            }
+        }
+
         $task          = new TaskModel();
         $task->data([
             'family_id'        => $familyId,
             'creator_user_id'  => $this->auth->id,
-            'assignee_user_id' => $this->auth->id,
+            'assignee_user_id' => $assigneeUserId,
             'task_name'        => $params['task_name'],
             'description'      => isset($params['description']) ? $params['description'] : '',
             'category'         => $params['category'],
@@ -385,9 +407,18 @@ class Task extends Api
             $this->error('任务不存在');
         }
 
-        // 只能任务执行人打卡
-        if ((int)$task['assignee_user_id'] !== (int)$this->auth->id) {
-            $this->error('只能为自己的任务打卡');
+        // 只能任务执行人打卡，或家长代打卡
+        $currentUserId = $this->auth->id;
+        $targetUserId = (int)$task['assignee_user_id'];
+        $isProxy = false;
+
+        if ($targetUserId !== (int)$currentUserId) {
+             // Check parent proxy
+             $isParent = \app\common\model\FamilyMember::isParentOf($currentUserId, $targetUserId);
+             if (!$isParent) {
+                 $this->error('只能为自己的任务打卡，或由家长代为打卡');
+             }
+             $isProxy = true;
         }
 
         $params = $this->request->post();
@@ -407,32 +438,38 @@ class Task extends Api
 
         $checkin                  = new TaskCheckinModel();
         $checkin->task_id         = $task['id'];
-        $checkin->user_id         = $this->auth->id;
+        $checkin->user_id         = $targetUserId; // 记录为执行任务的用户（孩子）
         $checkin->content_type    = $params['content_type'];
         $checkin->content_url     = isset($params['content_url']) ? $params['content_url'] : '';
         $checkin->text_content    = isset($params['text_content']) ? $params['text_content'] : '';
+        
+        if ($isProxy) {
+             $parentName = $this->auth->nickname ?: $this->auth->username;
+             $checkin->text_content .= " (由家长 {$parentName} 代打卡)";
+        }
+        
         $checkin->checkin_time    = time();
         
         // 计算能量值（根据任务类型和难度，这里简化处理，默认10能量值）
         $energyAwarded = $task['energy_value'] > 0 ? $task['energy_value'] : 10;
         $checkin->energy_awarded = $energyAwarded;
         
-        // 增加用户能量值
-        EnergyLog::changeEnergy($this->auth->id, $energyAwarded, EnergyLog::REASON_TASK_COMPLETE, $task['id']);
+        // 增加用户能量值 (给孩子加能量)
+        EnergyLog::changeEnergy($targetUserId, $energyAwarded, EnergyLog::REASON_TASK_COMPLETE, $task['id']);
         
         // 检查并授予徽章
         $badgeAwarded = null;
         // 检查连续打卡徽章
-        $consecutiveDays = $this->getConsecutiveCheckinDays($this->auth->id);
+        $consecutiveDays = $this->getConsecutiveCheckinDays($targetUserId);
         if ($consecutiveDays >= 7) {
-            $badgeAwarded = Badge::checkAndAward($this->auth->id, 'persistence');
+            $badgeAwarded = Badge::checkAndAward($targetUserId, 'persistence');
             if ($badgeAwarded) {
                 $checkin->badge_awarded_id = $badgeAwarded->badge_id;
             }
         }
         
         // 检查探索家徽章（首次尝试新分类）
-        $this->checkExplorerBadge($this->auth->id, $task['category']);
+        $this->checkExplorerBadge($targetUserId, $task['category']);
         
         $checkin->badge_awarded_id = $badgeAwarded ? $badgeAwarded->badge_id : 0;
         $checkin->save();

@@ -153,7 +153,8 @@ const TaskCreatePage: React.FC = () => {
           task_name: formData.name,
           description: formData.description,
           category: formData.category as TaskCategory,
-          target_date: formData.targetDate
+          target_date: formData.targetDate,
+          assignee_user_id: formData.child ? Number(formData.child) : undefined
         });
         success('任务创建成功！');
       }

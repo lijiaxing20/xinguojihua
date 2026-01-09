@@ -8,6 +8,7 @@ import P_child_dashboard from '../pages/p-child_dashboard';
 import P_task_list from '../pages/p-task_list';
 import P_task_create from '../pages/p-task_create';
 import P_task_detail from '../pages/p-task_detail';
+import P_task_checkin from '../pages/p-task_checkin_modal';
 import P_wish_list from '../pages/p-wish_list';
 import P_family_honor_wall from '../pages/p-family_honor_wall';
 import P_growth_report from '../pages/p-growth_report';
@@ -95,16 +96,25 @@ const router = createBrowserRouter([
     errorElement: <ErrorPage />,
   },
       {
-    path: '/task-detail',
-    element: (
-      <ErrorBoundary>
-        <P_task_detail />
-      </ErrorBoundary>
-    ),
-    errorElement: <ErrorPage />,
-  },
+        path: '/task-detail',
+        element: (
+          <ErrorBoundary>
+            <P_task_detail />
+          </ErrorBoundary>
+        ),
+        errorElement: <ErrorPage />,
+      },
       {
-    path: '/wish-list',
+        path: '/task-checkin',
+        element: (
+          <ErrorBoundary>
+            <P_task_checkin />
+          </ErrorBoundary>
+        ),
+        errorElement: <ErrorPage />,
+      },
+      {
+        path: '/wish-list',
     element: (
       <ErrorBoundary>
         <P_wish_list />

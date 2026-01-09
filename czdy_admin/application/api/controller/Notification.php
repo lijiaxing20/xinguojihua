@@ -60,6 +60,8 @@ class Notification extends Api
                 'list'  => $formattedList,
                 'total' => $total,
             ]);
+        } catch (\think\exception\HttpResponseException $e) {
+            throw $e;
         } catch (\Exception $e) {
             // 如果表不存在，返回空列表
             $this->success('', [
@@ -87,6 +89,8 @@ class Notification extends Api
                     'readtime' => time()
                 ]);
             $this->success();
+        } catch (\think\exception\HttpResponseException $e) {
+            throw $e;
         } catch (\Exception $e) {
             $this->error('操作失败');
         }
@@ -122,6 +126,8 @@ class Notification extends Api
                 ->where('status', 'unread')
                 ->count();
             $this->success('', ['count' => $count]);
+        } catch (\think\exception\HttpResponseException $e) {
+            throw $e;
         } catch (\Exception $e) {
             $this->success('', ['count' => 0]);
         }

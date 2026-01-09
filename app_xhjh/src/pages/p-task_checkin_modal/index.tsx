@@ -3,6 +3,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { taskService, Task } from '../../services/task';
+import { useAuthStore } from '../../store/authStore';
+import { useFamilyStore } from '../../store/familyStore';
 import styles from './styles.module.css';
 import { useToast } from '../../components/Toast';
 
@@ -15,6 +17,8 @@ const TaskCheckinModal: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { success, error: showError, warning, info } = useToast();
+  const { userInfo } = useAuthStore();
+  const { familyMembers } = useFamilyStore();
   
   // 状态管理
   const [task, setTask] = useState<Task | null>(null);
@@ -252,6 +256,9 @@ const TaskCheckinModal: React.FC = () => {
     }
   };
   
+  const isProxy = task && userInfo && task.assignee_user_id && task.assignee_user_id !== userInfo.id;
+  const childName = isProxy ? familyMembers.find(m => m.user_id === task?.assignee_user_id)?.nickname || '孩子' : '';
+
   return (
     <div className={styles.pageWrapper}>
       {/* 主模态弹窗 */}
@@ -288,6 +295,14 @@ const TaskCheckinModal: React.FC = () => {
               </div>
             ) : (
               <>
+                {/* 代理打卡提示 */}
+                {isProxy && (
+                  <div className="mb-4 p-3 bg-yellow-50 text-yellow-800 rounded-lg flex items-center text-sm border border-yellow-100">
+                    <i className="fas fa-user-shield mr-2 text-yellow-600"></i>
+                    <span>您正在为 <strong>{childName}</strong> 代打卡</span>
+                  </div>
+                )}
+
                 {/* 任务信息显示 */}
                 <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-100">
                   <div className="flex items-center space-x-3">
@@ -495,21 +510,52 @@ const TaskCheckinModal: React.FC = () => {
 
       {/* 成功提示弹窗 */}
       {showSuccessModal && (
-        <div className={`fixed inset-0 ${styles.modalBackdrop} z-60 flex items-center justify-center p-4`}>
-          <div className={`bg-white rounded-2xl shadow-modal w-full max-w-md text-center ${styles.modalEnter}`}>
-            <div className="p-8">
-              <div className={`w-16 h-16 bg-gradient-to-r from-green-400 to-blue-500 rounded-full flex items-center justify-center mx-auto mb-4 ${styles.successAnimation}`}>
-                <i className="fas fa-check text-white text-2xl"></i>
-              </div>
-              <h3 className="text-xl font-bold text-text-primary mb-2">打卡成功！</h3>
-              <p className="text-sm text-text-secondary mb-6">
-                恭喜你完成任务，获得了 <span className="font-bold text-yellow-600">+{currentTask.energy} 能量值</span>！
-              </p>
-              <button 
-                onClick={handleSuccessConfirm}
-                className={`${styles.btnGradient} text-white px-6 py-2 rounded-lg text-sm font-medium w-full`}
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm text-center animate-bounce-in">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <i className="fas fa-check text-2xl text-green-500"></i>
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">打卡成功！</h3>
+            <p className="text-gray-500 mb-6">
+              {isProxy 
+                ? `已成功帮 ${childName} 完成打卡，能量值已发放！`
+                : '太棒了！又完成了一个任务，继续加油！'
+              }
+            </p>
+            <button
+              onClick={handleSuccessConfirm}
+              className="w-full py-3 bg-gradient-to-r from-green-400 to-green-600 text-white rounded-xl font-medium shadow-lg shadow-green-200 hover:shadow-green-300 transition-all"
+            >
+              我知道了
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 代理打卡确认弹窗 */}
+      {showProxyConfirmModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-sm text-center animate-fade-in">
+            <div className="w-16 h-16 bg-yellow-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <i className="fas fa-user-shield text-2xl text-yellow-600"></i>
+            </div>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">确认代打卡？</h3>
+            <p className="text-gray-500 mb-6 text-sm">
+              您正在为 <strong>{childName}</strong> 进行任务打卡。<br/>
+              确认后任务将标记为完成，并向孩子发放能量值。
+            </p>
+            <div className="flex space-x-3">
+              <button
+                onClick={() => setShowProxyConfirmModal(false)}
+                className="flex-1 py-2 border border-gray-300 text-gray-700 rounded-xl font-medium hover:bg-gray-50 transition-colors"
               >
-                太棒了！
+                取消
+              </button>
+              <button
+                onClick={executeCheckin}
+                className="flex-1 py-2 bg-gradient-to-r from-yellow-400 to-orange-500 text-white rounded-xl font-medium shadow-lg shadow-yellow-200 hover:shadow-yellow-300 transition-all"
+              >
+                确认打卡
               </button>
             </div>
           </div>

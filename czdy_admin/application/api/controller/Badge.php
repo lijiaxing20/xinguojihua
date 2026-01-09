@@ -42,7 +42,7 @@ class Badge extends Api
             ->join('__BADGE__ b', 'ub.badge_id = b.id')
             ->where('ub.user_id', $userId)
             ->order('ub.awarded_at', 'desc')
-            ->field('b.id, b.badge_name, b.badge_type, b.icon_url as icon, b.description, ub.awarded_at, ub.badge_id')
+            ->field('b.id, b.badge_name, b.badge_type, b.icon_url, b.icon_url as icon, b.description, ub.awarded_at, ub.badge_id')
             ->select();
 
         // 这里的$list已经是数组了，不需要collection转换和hidden

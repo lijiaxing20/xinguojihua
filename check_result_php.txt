@@ -1,0 +1,106 @@
+Connected successfully to database 'xinghuojihua'
+
+Table: fa_user
+  - id (int(10) unsigned) [PRI] // ID
+  - group_id (int(10) unsigned) // 组别ID
+  - username (varchar(32)) [MUL] // 用户名
+  - nickname (varchar(50)) // 昵称
+  - password (varchar(32)) // 密码
+  - salt (varchar(30)) // 密码盐
+  - email (varchar(100)) [MUL] // 电子邮箱
+  - mobile (varchar(11)) [MUL] // 手机号
+  - avatar (varchar(255)) // 头像
+  - level (tinyint(1) unsigned) // 等级
+  - gender (tinyint(1) unsigned) // 性别
+  - birthday (date) // 生日
+  - bio (varchar(100)) // 格言
+  - money (decimal(10,2)) // 余额
+  - score (int(10)) // 积分
+  - successions (int(10) unsigned) // 连续登录天数
+  - maxsuccessions (int(10) unsigned) // 最大连续登录天数
+  - prevtime (bigint(16)) // 上次登录时间
+  - logintime (bigint(16)) // 登录时间
+  - loginip (varchar(50)) // 登录IP
+  - loginfailure (tinyint(1) unsigned) // 失败次数
+  - loginfailuretime (bigint(16)) // 最后登录失败时间
+  - joinip (varchar(50)) // 加入IP
+  - jointime (bigint(16)) // 加入时间
+  - createtime (bigint(16)) // 创建时间
+  - updatetime (bigint(16)) // 更新时间
+  - token (varchar(50)) // Token
+  - status (varchar(30)) // 状态
+  - verification (varchar(255)) // 验证
+  - energy (int(11)) // 能量值
+  - settings (text) // 用户设置
+
+Table: fa_wish
+  - id (int(10) unsigned) [PRI]
+  - user_id (int(10) unsigned)
+  - family_id (int(10) unsigned)
+  - wish_name (varchar(255))
+  - description (text)
+  - required_energy (int(11))
+  - status (varchar(20))
+  - fulfilled_at (int(11))
+  - createtime (int(11))
+  - updatetime (int(11))
+
+Table: fa_family
+  - id (int(10) unsigned) [PRI]
+  - family_name (varchar(255)) // 家庭名称
+  - settings (text) // 家庭设置
+  - creator_user_id (int(10) unsigned) // 创建者用户ID
+  - createtime (int(10) unsigned)
+  - updatetime (int(10) unsigned)
+
+Table: fa_family_member
+  - id (int(10) unsigned) [PRI]
+  - family_id (int(10) unsigned) [MUL] // 家庭ID
+  - user_id (int(10) unsigned) [MUL] // 用户ID
+  - role_in_family (varchar(20)) // 角色：parent/child
+  - joined_at (int(10) unsigned) // 加入时间
+
+Table: fa_task
+  - id (int(10) unsigned) [PRI]
+  - family_id (int(10) unsigned)
+  - creator_user_id (int(10) unsigned)
+  - assignee_user_id (int(10) unsigned)
+  - task_name (varchar(255))
+  - description (text)
+  - category (varchar(50))
+  - status (varchar(50))
+  - target_date (datetime)
+  - energy_value (int(11))
+  - createtime (int(11))
+  - updatetime (int(11))
+
+Table: fa_task_checkin
+  - id (int(10) unsigned) [PRI]
+  - task_id (int(10) unsigned)
+  - user_id (int(10) unsigned)
+  - checkin_time (int(11))
+  - content_type (varchar(20))
+  - content_url (varchar(512))
+  - text_content (text)
+  - energy_awarded (int(11))
+  - badge_awarded_id (int(10) unsigned)
+  - createtime (int(11))
+  - updatetime (int(11))
+  - readtime (int(11)) // 阅读时间
+
+Table: fa_badge
+  - id (int(10) unsigned) [PRI]
+  - badge_type (varchar(50)) [UNI] // 徽章类型：persistence/explorer/creative等
+  - badge_name (varchar(255)) // 徽章名称
+  - description (text) // 徽章描述
+  - icon_url (varchar(512)) // 图标URL
+  - criteria (text) // 获得条件（JSON格式）
+  - createtime (int(10) unsigned)
+  - updatetime (int(10) unsigned)
+
+Table: fa_user_badge
+  - id (int(10) unsigned) [PRI]
+  - user_id (int(10) unsigned) [MUL] // 用户ID
+  - badge_id (int(10) unsigned) [MUL] // 徽章ID
+  - awarded_at (int(10) unsigned) // 获得时间
+

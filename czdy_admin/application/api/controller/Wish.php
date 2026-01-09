@@ -316,31 +316,53 @@ class Wish extends Api
     /**
      * 更新心愿
      *
-     * PUT /api/wish/update/{id}
+     * POST /api/wish/update
      */
-    public function update($id = 0)
+    public function update()
     {
-        $wish = WishModel::get($id);
+        $params = $this->request->post();
+        $rule = [
+            'id'        => 'require|number',
+            'wish_name' => 'require|max:255',
+        ];
+        
+        $validate = new Validate($rule);
+        if (!$validate->check($params)) {
+            $this->error($validate->getError());
+        }
+
+        $wish = WishModel::get($params['id']);
         if (!$wish) {
             $this->error('心愿不存在');
         }
 
-        if ((int)$wish['user_id'] !== (int)$this->auth->id) {
-            $this->error('无权限编辑该心愿');
-        }
-
-        $params = $this->request->put();
-
-        $allowFields = ['wish_name', 'description'];
-
-        foreach ($allowFields as $field) {
-            if (isset($params[$field])) {
-                $wish[$field] = $params[$field];
+        // 权限检查
+        $hasPermission = false;
+        if ((int)$wish['user_id'] === (int)$this->auth->id) {
+            // 自己修改
+            if ($wish['status'] !== 'pending') {
+                $this->error('只能修改待审核的心愿');
+            }
+            $hasPermission = true;
+        } else {
+            // 家长修改
+            $member = \app\common\model\FamilyMember::where('user_id', $this->auth->id)->find();
+            if ($member && $member['role_in_family'] === 'parent' && (int)$member['family_id'] === (int)$wish['family_id']) {
+                $hasPermission = true;
             }
         }
 
-        $wish->save();
+        if (!$hasPermission) {
+            $this->error('无权限修改该心愿');
+        }
 
+        // 更新字段
+        if (isset($params['wish_name'])) $wish->wish_name = $params['wish_name'];
+        if (isset($params['description'])) $wish->description = $params['description'];
+        if (isset($params['required_energy'])) $wish->required_energy = (int)$params['required_energy'];
+        
+        $wish->save();
+        
         $this->success('更新成功', $wish);
     }
 

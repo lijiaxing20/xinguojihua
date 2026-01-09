@@ -35,8 +35,8 @@ const WishListPage: React.FC = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   // 表单数据
-  const [createForm, setCreateForm] = useState({ name: '', description: '' });
-  const [editForm, setEditForm] = useState({ name: '', description: '' });
+  const [createForm, setCreateForm] = useState({ name: '', description: '', requiredEnergy: '' });
+  const [editForm, setEditForm] = useState({ name: '', description: '', requiredEnergy: '' });
   const [currentWish, setCurrentWish] = useState<UIWish | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -246,6 +246,7 @@ const WishListPage: React.FC = () => {
     wishService.updateWish(Number(currentWish.id), {
       wish_name: editForm.name,
       description: editForm.description,
+      required_energy: Number(editForm.requiredEnergy) || 0
     }).then((w) => {
       setWishesData(prev => prev.map(wish => 
         wish.id === currentWish.id 
@@ -688,6 +689,18 @@ const WishListPage: React.FC = () => {
                     />
                   </div>
                   <div>
+                    <label htmlFor="wish-required-energy" className="block text-sm font-medium text-text-primary mb-2">所需能量</label>
+                    <input 
+                      type="number" 
+                      id="wish-required-energy" 
+                      value={createForm.requiredEnergy}
+                      onChange={(e) => setCreateForm(prev => ({ ...prev, requiredEnergy: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
+                      placeholder="请输入所需能量" 
+                      min="0"
+                    />
+                  </div>
+                  <div>
                     <label htmlFor="wish-description" className="block text-sm font-medium text-text-primary mb-2">心愿描述</label>
                     <textarea 
                       id="wish-description" 
@@ -799,6 +812,18 @@ const WishListPage: React.FC = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
                       placeholder="请输入心愿名称" 
                       required 
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="edit-wish-required-energy" className="block text-sm font-medium text-text-primary mb-2">所需能量</label>
+                    <input 
+                      type="number" 
+                      id="edit-wish-required-energy" 
+                      value={editForm.requiredEnergy}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, requiredEnergy: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent" 
+                      placeholder="请输入所需能量" 
+                      min="0"
                     />
                   </div>
                   <div>

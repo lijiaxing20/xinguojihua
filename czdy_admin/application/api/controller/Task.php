@@ -230,9 +230,18 @@ class Task extends Api
 
         // 权限检查：只有创建者或分配者可以修改
         // 或者是家长修改孩子的任务
-        if ((int)$task['creator_user_id'] !== (int)$this->auth->id && (int)$task['assignee_user_id'] !== (int)$this->auth->id) {
-             // 如果是家长，且任务属于家庭成员
-             // 这里简化处理，暂时只允许创建者修改
+        $hasPermission = false;
+        if ((int)$task['creator_user_id'] === (int)$this->auth->id || (int)$task['assignee_user_id'] === (int)$this->auth->id) {
+            $hasPermission = true;
+        } else {
+            // 检查是否是家庭家长
+            $member = \app\common\model\FamilyMember::where('user_id', $this->auth->id)->find();
+            if ($member && $member['role_in_family'] === 'parent' && (int)$member['family_id'] === (int)$task['family_id']) {
+                $hasPermission = true;
+            }
+        }
+
+        if (!$hasPermission) {
              $this->error('无权限修改该任务');
         }
 

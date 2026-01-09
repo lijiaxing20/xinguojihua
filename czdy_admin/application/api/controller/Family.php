@@ -43,7 +43,7 @@ class Family extends Api
             $this->success('', ['has_family' => false]);
         }
 
-        $family = FamilyModel::with(['members.user', 'creator'])->get($member->family_id);
+        $family = FamilyModel::with(['members.user', 'creator'])->find($member->family_id);
         
         if (!$family) {
             $this->success('', ['has_family' => false]);
@@ -56,8 +56,8 @@ class Family extends Api
                 'id' => $m->id,
                 'user_id' => $m->user_id,
                 'role' => $m->role_in_family,
-                'nickname' => $m->user->nickname ?? '',
-                'avatar' => $m->user->avatar ?? '',
+                'nickname' => $m->user ? $m->user->nickname : '已删除用户',
+                'avatar' => $m->user ? $m->user->avatar : '',
                 'joined_at' => $m->joined_at,
                 'is_creator' => $family->creator_user_id == $m->user_id,
             ];

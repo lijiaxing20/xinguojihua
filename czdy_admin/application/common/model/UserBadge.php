@@ -21,7 +21,10 @@ class UserBadge extends Model
      */
     public function getBadgeInfoAttr($value, $data)
     {
-        return Badge::find($data['badge_id']);
+        if (!isset($data['badge_id'])) {
+            return null;
+        }
+        return Badge::get($data['badge_id']);
     }
 }
 

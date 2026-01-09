@@ -215,6 +215,22 @@ const FamilyHonorWall: React.FC = () => {
 
         {/* 主内容区 */}
         <main className="flex-1 ml-60 p-6">
+          {error ? (
+            <div className="flex flex-col items-center justify-center h-full min-h-[400px] bg-white rounded-2xl shadow-card p-12">
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mb-4">
+                <i className="fas fa-exclamation-triangle text-2xl text-danger"></i>
+              </div>
+              <h3 className="text-xl font-bold text-gray-800 mb-2">加载失败</h3>
+              <p className="text-gray-500 mb-6">{error}</p>
+              <button
+                onClick={() => fetchData()}
+                className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-opacity-90 transition-colors"
+              >
+                重试
+              </button>
+            </div>
+          ) : (
+            <>
           {/* 页面头部 */}
           <div className="mb-6">
             <div className="flex items-center justify-between">
